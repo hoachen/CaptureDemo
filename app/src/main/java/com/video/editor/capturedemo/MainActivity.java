@@ -2,11 +2,13 @@ package com.video.editor.capturedemo;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.Manifest;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
+import com.tbruyelle.rxpermissions3.RxPermissions;
 import com.video.editor.capturedemo.databinding.ActivityMainBinding;
 
 public class MainActivity extends AppCompatActivity {
@@ -19,6 +21,7 @@ public class MainActivity extends AppCompatActivity {
     private ActivityMainBinding binding;
 
     private long mRecordFd;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +48,19 @@ public class MainActivity extends AppCompatActivity {
                 stopRecordAudio(mRecordFd);
             }
         });
+
+        RxPermissions rxPermissions = new RxPermissions(this);
+        rxPermissions
+                .request(Manifest.permission.CAMERA,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                        Manifest.permission.READ_EXTERNAL_STORAGE,
+                        Manifest.permission.RECORD_AUDIO,
+                        Manifest.permission.READ_PHONE_STATE)
+                .subscribe(granted -> {
+                    if (granted) { // Always true pre-M
+                    } else {
+                    }
+                });
     }
 
     /**

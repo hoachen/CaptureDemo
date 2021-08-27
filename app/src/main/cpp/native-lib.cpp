@@ -19,7 +19,7 @@ Java_com_video_editor_capturedemo_MainActivity_stringFromJNI(
 static void audioRecordCallBack(std::shared_ptr<Task> &task)
 {
     std::thread::id tid = std::this_thread::get_id();
-    LOGI("revc audio ts:%lu size =%d thread-id =%d", task->timestamp, task->linesize[0], tid);
+    LOGI("CHH revc audio ts:%lu size =%d thread-id =%lu", task->timestamp, task->linesize[0], tid);
 
     if (file)
         fwrite(task->data[0], 1, task->linesize[0], file);
@@ -36,7 +36,7 @@ Java_com_video_editor_capturedemo_MainActivity_createAudioRecorder(
     conf.channels = 1;
     conf.sampleRate = 44100;
     conf.bitDepth = 8;
-    recorderBase->Init(conf);
+    recorderBase->init(conf);
     return reinterpret_cast<long>(recorderBase);
 }
 
@@ -50,7 +50,7 @@ Java_com_video_editor_capturedemo_MainActivity_startRecordAudio (
     file = fopen(filePath, "wb");
     RecorderBase  *recorderBase = reinterpret_cast<RecorderBase *>(fd);
     env->ReleaseStringUTFChars(path, filePath);
-    return recorderBase->Start();
+    return recorderBase->start();
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -58,9 +58,9 @@ Java_com_video_editor_capturedemo_MainActivity_stopRecordAudio(
         JNIEnv* env,
         jobject /* this */,
         jlong fd) {
-    std::string hello = "Hello from C++";
     RecorderBase  *recorderBase = reinterpret_cast<RecorderBase *>(fd);
-    recorderBase->Stop();
+    recorderBase->stop();
     fclose(file);
     delete recorderBase;
+    return 0;
 }

@@ -16,9 +16,9 @@ class OpenSLESRecorder : public RecorderBase {
 public:
     OpenSLESRecorder();
     ~OpenSLESRecorder();
-    int Init(SourceConfig &config) override;
-    int Start() override;
-    int Stop() override;
+    int init(SourceConfig &config) override;
+    int start() override;
+    int stop() override;
 private:
     int InitEngine();
     int DestroyEngine();
@@ -26,7 +26,7 @@ private:
 //    void bpRecordCallBack(SLAndroidSimpleBufferQueueItf bq, void *context);
 public:
     bool isRecording = false;
-    uint8_t* inputBuffer[2] = {nullptr};
+    uint8_t * inputBuffer[2] = {nullptr};
     int inputBufferIndex = 0;
     int bufferSize;
     SourceConfig audioConfig;

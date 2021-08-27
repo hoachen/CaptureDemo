@@ -21,7 +21,7 @@ OpenSLESRecorder::~OpenSLESRecorder() {
 
 static void bpRecordCallBack(SLAndroidSimpleBufferQueueItf bp, void *context);
 
-int OpenSLESRecorder::Init(SourceConfig &config) {
+int OpenSLESRecorder::init(SourceConfig &config) {
     audioConfig = config;
     slChannelNum = static_cast<SLuint32>(config.channels);
     slChannelMask = (slChannelNum == 2)
@@ -80,11 +80,14 @@ int OpenSLESRecorder::InitEngine() {
 
 static void bpRecordCallBack(SLAndroidSimpleBufferQueueItf bp, void *context)
 {
+    ALOGI(TAG, "bpRecordCallBack");
     OpenSLESRecorder *recorder = reinterpret_cast<OpenSLESRecorder *>(context);
-    uint8_t *pcmData = new uint8_t [recorder->bufferSize];
+    if (recorder == nullptr)
+        return;
 
     if (recorder->isRecording) {
         if (recorder->output) {
+            uint8_t pcmData[recorder->bufferSize];
             std::shared_ptr<Task> task(new Task());
             task->channels = recorder->audioConfig.channels;
             task->sampleRate = recorder->audioConfig.sampleRate;
@@ -99,11 +102,12 @@ static void bpRecordCallBack(SLAndroidSimpleBufferQueueItf bp, void *context)
         recorder->inputBufferIndex = recorder->inputBufferIndex ? 0 : 1;
         (*bp)->Enqueue(bp, recorder->inputBuffer[recorder->inputBufferIndex], recorder->bufferSize);
     }
-    delete []pcmData;
 }
 
 void OpenSLESRecorder::threadFun() {
-    ALOGI(LOG_TAG, "start record thread");
+    std::thread::id tid = std::this_thread::get_id();
+    ALOGI(LOG_TAG, "start record thread thread-id= %lu",tid);
+
     SLresult result;
     if ((result = InitEngine()) != 0) {
         ALOGE(LOG_TAG, "init audio engine failed");
@@ -173,7 +177,6 @@ void OpenSLESRecorder::threadFun() {
 
     // 开始录制
     (*recorderRecorder)->SetRecordState(recorderRecorder, SL_RECORDSTATE_RECORDING);
-
     inputBufferIndex= 0;
     if ((inputBuffer[0] = (uint8_t *)calloc(bufferSize, sizeof(uint8_t))) == nullptr ||
             (inputBuffer[1] = (uint8_t *)calloc(bufferSize, sizeof(uint8_t))) == nullptr) {
@@ -185,7 +188,7 @@ void OpenSLESRecorder::threadFun() {
     while (isRecording) {
 
     }
-    ALOGI(TAG, "Stop Audio Record...");
+    ALOGI(TAG, "stop Audio Record...");
     if (recorderRecorder != nullptr) {
         (*recorderRecorder)->SetRecordState(recorderRecorder, SL_RECORDSTATE_STOPPED);
     }
@@ -193,7 +196,9 @@ void OpenSLESRecorder::threadFun() {
     DestroyEngine();
 }
 
-int OpenSLESRecorder::Start() {
+int OpenSLESRecorder::start() {
+    std::thread::id tid = std::this_thread::get_id();
+    ALOGI(LOG_TAG, "call start() thread-id= %lu",tid);
     if (isRecording)
         return 0;
     isRecording = true;
@@ -202,26 +207,29 @@ int OpenSLESRecorder::Start() {
 }
 
 int OpenSLESRecorder::DestroyEngine() {
-    if (recorderObject != nullptr) {
-        (*recorderObject)->Destroy(recorderObject);
-        recorderObject = nullptr;
-        recorderRecorder = nullptr;
-        recordBufferQueue = nullptr;
-    }
-    if (engineObject != nullptr) {
-        (*engineObject)->Destroy(engineObject);
-        engineEngine = nullptr;
-        engineObject = nullptr;
-    }
-    if (inputBuffer[0] != nullptr) {
-        free(inputBuffer[0]);
-    }
-    if (inputBuffer[1] != nullptr)
+//    if (recorderObject != nullptr) {
+//        (*recorderObject)->Destroy(recorderObject);
+//        recorderObject = nullptr;
+//        recorderRecorder = nullptr;
+//        recordBufferQueue = nullptr;
+//    }
+//    if (engineObject != nullptr) {
+//        (*engineObject)->Destroy(engineObject);
+//        engineEngine = nullptr;
+//        engineObject = nullptr;
+//    }
+//    if (inputBuffer[0] != nullptr) {
+//        free(inputBuffer[0]);
+//    }
+//    if (inputBuffer[1] != nullptr)
         free(inputBuffer[1]);
+    ALOGI(TAG, "Destroy Engine fine");
     return 0;
 }
 
-int OpenSLESRecorder::Stop() {
+int OpenSLESRecorder::stop() {
+    std::thread::id tid = std::this_thread::get_id();
+    ALOGI(LOG_TAG, "call stop() thread-id= %lu",tid);
     isRecording = false;
     if (audioRecordThread.joinable())
         audioRecordThread.join();

@@ -24,6 +24,8 @@ add_library( # Sets the name of the library.
              native-lib.cpp
              RecorderBase.cpp
              OpenSLESRecorder.cpp
+             RenderBase.cpp
+             OpenSLESRender.cpp
              log.h
         )
 

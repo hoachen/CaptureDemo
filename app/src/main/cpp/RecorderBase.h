@@ -15,9 +15,9 @@ class RecorderBase {
 public:
     RecorderBase();
     ~RecorderBase();
-    virtual int Init(SourceConfig &config) = 0;
-    virtual int Start() = 0;
-    virtual int Stop() = 0;
+    virtual int init(SourceConfig &config) = 0;
+    virtual int start() = 0;
+    virtual int stop() = 0;
     std::function<void(std::shared_ptr<Task> &task)> output = nullptr;
 };
 
