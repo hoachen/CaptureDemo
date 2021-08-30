@@ -55,7 +55,7 @@ int OpenSLESRecorder::init(SourceConfig &config) {
     }
     bufferSize = config.sampleRate * BUFFER_TIME_MS / 1000 * config.channels;
     timestamp = 0;
-   return 0;
+   return QCODE_OK;
 }
 
 int OpenSLESRecorder::InitEngine() {
@@ -75,7 +75,7 @@ int OpenSLESRecorder::InitEngine() {
         ALOGE(LOG_TAG, "Get engine interface failed %u", result);
         return result;
     }
-    return 0;
+    return QCODE_OK;
 }
 
 static void bpRecordCallBack(SLAndroidSimpleBufferQueueItf bp, void *context)
@@ -203,7 +203,7 @@ int OpenSLESRecorder::start() {
         return 0;
     isRecording = true;
     audioRecordThread = std::thread(&OpenSLESRecorder::threadFun, this);
-    return 0;
+    return QCODE_OK;
 }
 
 int OpenSLESRecorder::DestroyEngine() {
@@ -224,7 +224,7 @@ int OpenSLESRecorder::DestroyEngine() {
     if (inputBuffer[1] != nullptr)
         free(inputBuffer[1]);
     ALOGI(TAG, "Destroy Engine fine");
-    return 0;
+    return QCODE_OK;
 }
 
 int OpenSLESRecorder::stop() {
@@ -233,7 +233,7 @@ int OpenSLESRecorder::stop() {
     isRecording = false;
     if (audioRecordThread.joinable())
         audioRecordThread.join();
-    return 0;
+    return QCODE_OK;
 }
 
 
