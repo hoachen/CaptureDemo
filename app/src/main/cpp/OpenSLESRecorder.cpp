@@ -207,21 +207,21 @@ int OpenSLESRecorder::start() {
 }
 
 int OpenSLESRecorder::DestroyEngine() {
-//    if (recorderObject != nullptr) {
-//        (*recorderObject)->Destroy(recorderObject);
-//        recorderObject = nullptr;
-//        recorderRecorder = nullptr;
-//        recordBufferQueue = nullptr;
-//    }
-//    if (engineObject != nullptr) {
-//        (*engineObject)->Destroy(engineObject);
-//        engineEngine = nullptr;
-//        engineObject = nullptr;
-//    }
-//    if (inputBuffer[0] != nullptr) {
-//        free(inputBuffer[0]);
-//    }
-//    if (inputBuffer[1] != nullptr)
+    if (recorderObject != nullptr) {
+        (*recorderObject)->Destroy(recorderObject);
+        recorderObject = nullptr;
+        recorderRecorder = nullptr;
+        recordBufferQueue = nullptr;
+    }
+    if (engineObject != nullptr) {
+        (*engineObject)->Destroy(engineObject);
+        engineEngine = nullptr;
+        engineObject = nullptr;
+    }
+    if (inputBuffer[0] != nullptr) {
+        free(inputBuffer[0]);
+    }
+    if (inputBuffer[1] != nullptr)
         free(inputBuffer[1]);
     ALOGI(TAG, "Destroy Engine fine");
     return 0;

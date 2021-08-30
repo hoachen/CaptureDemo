@@ -4,6 +4,7 @@
 
 #include "OpenSLESRender.h"
 #include "log.h"
+#include <chrono>
 
 #define LOG_TAG "OpenSLESRender"
 
@@ -16,11 +17,13 @@ OpenSLESRender::OpenSLESRender() {
 }
 
 OpenSLESRender::~OpenSLESRender() {
-
 }
 
-static void aout_opensles_callback(SLAndroidSimpleBufferQueueItf bp, void *pContext) {
-
+static void opensles_callback(SLAndroidSimpleBufferQueueItf bp, void *pContext) {
+    ALOGI(LOG_TAG, "opensles_callback");
+    OpenSLESRender *render = (OpenSLESRender *)(pContext);
+    std::lock_guard<std::mutex> guard(render->weekUpMutex);
+    render->weekUpCond.notify_one();
 }
 
 int OpenSLESRender::init(SinkConfig &cfg) {
@@ -52,7 +55,6 @@ int OpenSLESRender::InitEngine() {
         ALOGE(LOG_TAG, "Get engine interface failed %u", result);
         return result;
     }
-
 
     const SLInterfaceID ids1[] = {SL_IID_VOLUME};
     const SLboolean req1[] = {SL_BOOLEAN_FALSE};
@@ -115,24 +117,116 @@ int OpenSLESRender::InitEngine() {
         ALOGE(LOG_TAG, "GetInterface volumeItf failed %u", result);
         return result;
     }
-    result = (*playerBufferQueue)->RegisterCallback(playerBufferQueue, aout_opensles_callback, this);
+    result = (*playerBufferQueue)->RegisterCallback(playerBufferQueue, opensles_callback, this);
     if (SL_RESULT_SUCCESS != result) {
         ALOGE(LOG_TAG, "RegisterCallback failed %u", result);
         return result;
     }
-
+    int bytesPerFrame = slChannelNum * 2; // 一个采样占16位，2 byte
+    int milliPerBuffer = TIME_PER_BUFFER; // 每个buffer 20ms
+    int sr = 16000;
+    int framesPerBuffer = milliPerBuffer * sr / 1000; // 每s 16000个采样， 20m个采样
+    bytesPerBuffer = bytesPerFrame * framesPerBuffer; // 每个buffer占多大
+    bufferCapacity = BUFFER_COUNT * bytesPerBuffer; // 所有buffer占的大小
+    outputBuffer = new uint8_t [bufferCapacity];
+    if (outputBuffer == nullptr) {
+        return QCODE_ERROR;
+    }
     return QCODE_OK;
 }
 
 int OpenSLESRender::DestroyEngine() {
+    if (playerBufferQueue)
+        (*playerBufferQueue)->Clear(playerBufferQueue);
 
+    if (playerBufferQueue)
+        playerBufferQueue = nullptr;
+    if (volumeItf)
+        volumeItf = nullptr;
+    if (playerPlay)
+        playerPlay = nullptr;
+
+    if (playerObject) {
+        (*playerObject)->Destroy(playerObject);
+        playerObject = nullptr;
+    }
+    if (engineEngine)
+        engineEngine = nullptr;
+    if (engineObject) {
+        (*engineObject)->Destroy(engineObject);
+        engineObject = nullptr;
+    }
+    if (outputBuffer)
+        delete[] outputBuffer;
+
+}
+
+int OpenSLESRender::fillBufferData(uint8_t *buffer, int size) {
+    std::lock_guard<std::mutex> guard(pcmListMutex);
+    int needSize = size;
+    while (needSize > 0 && !pcmList.empty())
+    if (!pcmList.empty()) {
+        std::pair<uint8_t *, size_t> node = pcmList.front();
+        pcmList.pop_front();
+        uint8_t *data = node.first;
+        int dataLen = node.second;
+        memcpy(buffer, data, dataLen);
+        buffer+= dataLen;
+        needSize -= dataLen;
+    }
+    return 0;
 }
 
 void OpenSLESRender::threadFun() {
+    SLresult ret;
+    outputBufferIndex = 0;
+    memset(outputBuffer, 0, bufferCapacity);
+    uint8_t *nextBuffer;
+    (*playerPlay)->SetPlayState(playerPlay, SL_PLAYSTATE_PLAYING);
+    while (isRunning) {
+        SLAndroidSimpleBufferQueueState slState = {0};
+        ret = (*playerBufferQueue)->GetState(playerBufferQueue, &slState);
+        if (ret != SL_RESULT_SUCCESS) {
+            ALOGE("%s: slBufferQueueItf->GetState() failed\n", __func__);
+        }
+        std::unique_lock<std::mutex> lck(weekUpMutex);
+        if (isRunning && slState.count >= BUFFER_COUNT) {
+            while (isRunning && slState.count >= BUFFER_COUNT) {
+                ALOGI(LOG_TAG, "Wait buffer queue 1s start");
+                weekUpCond.wait_for(lck, std::chrono::microseconds (1000));
+                ALOGI(LOG_TAG, "Wait buffer queue 1s end");
+                SLresult slRet = (*playerBufferQueue)->GetState(playerBufferQueue, &slState);
+                if (slRet != SL_RESULT_SUCCESS) {
+                    ALOGE("%s: slBufferQueueItf->GetState() failed\n", __func__);
+                }
+            }
+        }
+        ALOGI(LOG_TAG, "try send next buffer");
+        nextBuffer = outputBuffer + outputBufferIndex * bytesPerBuffer;
+        outputBufferIndex = (outputBufferIndex + 1) % BUFFER_COUNT;
+        fillBufferData(nextBuffer, bytesPerBuffer);
+        ret = (*playerBufferQueue)->Enqueue(playerBufferQueue, nextBuffer, bytesPerBuffer);
+        if (ret == SL_RESULT_SUCCESS) {
+            // do nothing
+        } else if (ret == SL_RESULT_BUFFER_INSUFFICIENT) {
+                // don't retry, just pass through
+            ALOGE(LOG_TAG, "SL_RESULT_BUFFER_INSUFFICIENT\n");
+        } else {
+            ALOGE(LOG_TAG, "slBufferQueueItf->Enqueue() = %d\n", (int)ret);
+            break;
+        }
+    }
+    (*playerPlay)->SetPlayState(playerPlay, SL_PLAYSTATE_STOPPED);
 }
 
 int OpenSLESRender::input(const std::shared_ptr<Task> &task) {
-
+    ALOGI(LOG_TAG, "Rec input data %d", task->linesize[0]);
+    std::lock_guard<std::mutex> lck (pcmListMutex);
+    int dataSize = task->linesize[0];
+    uint8_t *buf = new uint8_t[task->linesize[0]];
+    memcpy(buf, task->data[0], dataSize);
+    pcmList.push_back(std::pair<uint8_t *, size_t>(buf, dataSize));
+    return QCODE_OK;
 }
 
 int OpenSLESRender::start() {
@@ -146,8 +240,11 @@ int OpenSLESRender::start() {
 int OpenSLESRender::stop() {
     std::thread::id tid = std::this_thread::get_id();
     ALOGI(LOG_TAG, "call stop() thread-id= %lu",tid);
+    std::lock_guard<std::mutex> lck (weekUpMutex);
     isRunning = false;
-    if (rendrThread.joinable())
+    weekUpCond.notify_one();
+    if (renderThread.joinable())
         renderThread.join();
+    DestroyEngine();
     return QCODE_OK;
 }

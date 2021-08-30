@@ -21,6 +21,7 @@ public class MainActivity extends AppCompatActivity {
     private ActivityMainBinding binding;
 
     private long mRecordFd;
+    private long mRenderFd;
 
 
     @Override
@@ -49,6 +50,21 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        binding.btnRenderStart.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mRenderFd = createAudioRender();
+                        String saveFilPath = MainActivity.this.getExternalCacheDir() + "/record.pcm";
+                        Log.i("CHH", "start render audio which saved to " + saveFilPath);
+                        startRenderAudio(mRenderFd, saveFilPath);
+                    }
+                }).start();
+            }
+        });
+
         RxPermissions rxPermissions = new RxPermissions(this);
         rxPermissions
                 .request(Manifest.permission.CAMERA,
@@ -74,4 +90,12 @@ public class MainActivity extends AppCompatActivity {
     public native int startRecordAudio(long fd, String path);
 
     public native int stopRecordAudio(long fd);
+
+    public native long createAudioRender();
+
+    public native int startRenderAudio(long fd, String path);
+
+    public native int stopRenderAudio(long fd);
+
+
 }

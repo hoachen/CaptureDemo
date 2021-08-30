@@ -14,7 +14,6 @@
 #include <SLES/OpenSLES_Android.h>
 
 
-
 class OpenSLESRender : public  RenderBase {
 public:
     OpenSLESRender();
@@ -27,13 +26,18 @@ private:
     int InitEngine();
     int DestroyEngine();
     void threadFun();
+    int fillBufferData(uint8_t *buffer, int size);
 public:
     bool isRunning = false;
-private:
-    std::list<uint8_t> pcmList;
-    std::mutex pcmListMutex;
     std::mutex weekUpMutex;
     std::condition_variable weekUpCond;
+private:
+    std::list<std::pair<uint8_t *, size_t>> pcmList;
+    std::mutex pcmListMutex;
+    uint8_t* outputBuffer;
+    int outputBufferIndex;
+    int bytesPerBuffer;
+    int bufferCapacity;
     std::thread renderThread;
     SLuint32 slChannelNum;
     SLuint32 slChannelMask;
