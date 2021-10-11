@@ -2,8 +2,8 @@
 // Created by SHAREit on 2021/8/27.
 //
 
-#ifndef CAPTUREDEMO_OPENSLESRENDER_H
-#define CAPTUREDEMO_OPENSLESRENDER_H
+#ifndef CAPTUREDEMO_AUDIORENDER_H
+#define CAPTUREDEMO_AUDIORENDER_H
 
 #include "RenderBase.h"
 #include "common.h"
@@ -14,10 +14,10 @@
 #include <SLES/OpenSLES_Android.h>
 
 
-class OpenSLESRender : public  RenderBase {
+class AudioRender : public  RenderBase {
 public:
-    OpenSLESRender();
-    ~OpenSLESRender();
+    AudioRender();
+    ~AudioRender();
     int init(SinkConfig &cfg) override;
     int start() override;
     int stop() override;
@@ -52,4 +52,4 @@ private:
 };
 
 
-#endif //CAPTUREDEMO_OPENSLESRENDER_H
+#endif //CAPTUREDEMO_AUDIORENDER_H

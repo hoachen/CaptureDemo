@@ -2,31 +2,31 @@
 // Created by SHAREit on 2021/8/27.
 //
 
-#include "OpenSLESRender.h"
+#include "AudioRender.h"
 #include "log.h"
 #include <chrono>
 
-#define LOG_TAG "OpenSLESRender"
+#define LOG_TAG "AudioRender"
 
 /** ms **/
 #define TIME_PER_BUFFER 20
 #define BUFFER_COUNT 255
 
-OpenSLESRender::OpenSLESRender() {
+AudioRender::AudioRender() {
 
 }
 
-OpenSLESRender::~OpenSLESRender() {
+AudioRender::~AudioRender() {
 }
 
 static void opensles_callback(SLAndroidSimpleBufferQueueItf bp, void *pContext) {
     ALOGI(LOG_TAG, "opensles_callback");
-    OpenSLESRender *render = (OpenSLESRender *)(pContext);
+    AudioRender *render = (AudioRender *)(pContext);
     std::lock_guard<std::mutex> guard(render->weekUpMutex);
     render->weekUpCond.notify_one();
 }
 
-int OpenSLESRender::init(SinkConfig &cfg) {
+int AudioRender::init(SinkConfig &cfg) {
     this->cfg = cfg;
     slChannelNum = 1;
     slChannelMask = slChannelNum == 1 ?
@@ -38,7 +38,7 @@ int OpenSLESRender::init(SinkConfig &cfg) {
     return QCODE_OK;
 }
 
-int OpenSLESRender::InitEngine() {
+int AudioRender::InitEngine() {
     SLresult result;
     result = slCreateEngine(&engineObject, 0, nullptr, 0, nullptr, nullptr);
     if (SL_RESULT_SUCCESS != result) {
@@ -135,7 +135,7 @@ int OpenSLESRender::InitEngine() {
     return QCODE_OK;
 }
 
-int OpenSLESRender::DestroyEngine() {
+int AudioRender::DestroyEngine() {
     if (playerBufferQueue)
         (*playerBufferQueue)->Clear(playerBufferQueue);
 
@@ -161,7 +161,7 @@ int OpenSLESRender::DestroyEngine() {
 
 }
 
-int OpenSLESRender::fillBufferData(uint8_t *buffer, int size) {
+int AudioRender::fillBufferData(uint8_t *buffer, int size) {
     std::lock_guard<std::mutex> guard(pcmListMutex);
     int needSize = size;
     while (needSize > 0 && !pcmList.empty())
@@ -177,7 +177,7 @@ int OpenSLESRender::fillBufferData(uint8_t *buffer, int size) {
     return 0;
 }
 
-void OpenSLESRender::threadFun() {
+void AudioRender::threadFun() {
     SLresult ret;
     outputBufferIndex = 0;
     memset(outputBuffer, 0, bufferCapacity);
@@ -219,7 +219,7 @@ void OpenSLESRender::threadFun() {
     (*playerPlay)->SetPlayState(playerPlay, SL_PLAYSTATE_STOPPED);
 }
 
-int OpenSLESRender::input(const std::shared_ptr<Task> &task) {
+int AudioRender::input(const std::shared_ptr<Task> &task) {
     ALOGI(LOG_TAG, "Rec input data %d", task->linesize[0]);
     std::lock_guard<std::mutex> lck (pcmListMutex);
     int dataSize = task->linesize[0];
@@ -229,15 +229,15 @@ int OpenSLESRender::input(const std::shared_ptr<Task> &task) {
     return QCODE_OK;
 }
 
-int OpenSLESRender::start() {
+int AudioRender::start() {
     if (isRunning)
         return QCODE_OK;
     isRunning = true;
-    renderThread = std::thread(&OpenSLESRender::threadFun, this);
+    renderThread = std::thread(&AudioRender::threadFun, this);
     return QCODE_OK;
 }
 
-int OpenSLESRender::stop() {
+int AudioRender::stop() {
     std::thread::id tid = std::this_thread::get_id();
     ALOGI(LOG_TAG, "call stop() thread-id= %lu",tid);
     std::lock_guard<std::mutex> lck (weekUpMutex);

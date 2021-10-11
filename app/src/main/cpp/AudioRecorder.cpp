@@ -2,7 +2,7 @@
 // Created by chenhao on 2021/8/26.
 //
 
-#include "OpenSLESRecorder.h"
+#include "AudioRecorder.h"
 #include "log.h"
 #include <memory>
 
@@ -11,54 +11,54 @@
 // 20ms
 #define BUFFER_TIME_MS 20
 
-OpenSLESRecorder::OpenSLESRecorder() {
+AudioRecorder::AudioRecorder() {
 
 }
 
-OpenSLESRecorder::~OpenSLESRecorder() {
+AudioRecorder::~AudioRecorder() {
 
 }
 
 static void bpRecordCallBack(SLAndroidSimpleBufferQueueItf bp, void *context);
 
-int OpenSLESRecorder::init(SourceConfig &config) {
+int AudioRecorder::init(SourceConfig &config) {
     audioConfig = config;
     slChannelNum = static_cast<SLuint32>(config.channels);
     slChannelMask = (slChannelNum == 2)
                        ? SL_SPEAKER_FRONT_LEFT | SL_SPEAKER_FRONT_RIGHT : SL_SPEAKER_BACK_CENTER;
-    slSampleRate = SL_SAMPLINGRATE_44_1;
-    switch (audioConfig.sampleRate) {
-        case 8000:
-            slSampleRate = SL_SAMPLINGRATE_8;
-            break;
-        case 11025:
-            slSampleRate = SL_SAMPLINGRATE_11_025;
-            break;
-        case 12000:
-            slSampleRate = SL_SAMPLINGRATE_12;
-            break;
-        case 16000:
-            slSampleRate = SL_SAMPLINGRATE_16;
-            break;
-        case 44100:
-            slSampleRate = SL_SAMPLINGRATE_44_1;
-            break;
-        case 48000:
-            slSampleRate = SL_SAMPLINGRATE_48;
-            break;
-        case 64000:
-            slSampleRate = SL_SAMPLINGRATE_64;
-            break;
-        default:
-            slSampleRate = SL_SAMPLINGRATE_44_1;
-            break;
-    }
-    bufferSize = config.sampleRate * BUFFER_TIME_MS / 1000 * config.channels;
+    slSampleRate = SL_SAMPLINGRATE_16;
+//    switch (audioConfig.sampleRate) {
+//        case 8000:
+//            slSampleRate = SL_SAMPLINGRATE_8;
+//            break;
+//        case 11025:
+//            slSampleRate = SL_SAMPLINGRATE_11_025;
+//            break;
+//        case 12000:
+//            slSampleRate = SL_SAMPLINGRATE_12;
+//            break;
+//        case 16000:
+//            slSampleRate = SL_SAMPLINGRATE_16;
+//            break;
+//        case 44100:
+//            slSampleRate = SL_SAMPLINGRATE_44_1;
+//            break;
+//        case 48000:
+//            slSampleRate = SL_SAMPLINGRATE_48;
+//            break;
+//        case 64000:
+//            slSampleRate = SL_SAMPLINGRATE_64;
+//            break;
+//        default:
+//            slSampleRate = SL_SAMPLINGRATE_44_1;
+//            break;
+//    }
+    bufferSize = 16000 * BUFFER_TIME_MS / 1000 * config.channels * 2;
     timestamp = 0;
    return QCODE_OK;
 }
 
-int OpenSLESRecorder::InitEngine() {
+int AudioRecorder::InitEngine() {
     SLresult result;
     result = slCreateEngine(&engineObject, 0, nullptr, 0, nullptr, nullptr);
     if (SL_RESULT_SUCCESS != result) {
@@ -81,7 +81,7 @@ int OpenSLESRecorder::InitEngine() {
 static void bpRecordCallBack(SLAndroidSimpleBufferQueueItf bp, void *context)
 {
     ALOGI(TAG, "bpRecordCallBack");
-    OpenSLESRecorder *recorder = reinterpret_cast<OpenSLESRecorder *>(context);
+    AudioRecorder *recorder = reinterpret_cast<AudioRecorder *>(context);
     if (recorder == nullptr)
         return;
 
@@ -104,7 +104,7 @@ static void bpRecordCallBack(SLAndroidSimpleBufferQueueItf bp, void *context)
     }
 }
 
-void OpenSLESRecorder::threadFun() {
+void AudioRecorder::threadFun() {
     std::thread::id tid = std::this_thread::get_id();
     ALOGI(LOG_TAG, "start record thread thread-id= %lu",tid);
 
@@ -196,17 +196,17 @@ void OpenSLESRecorder::threadFun() {
     DestroyEngine();
 }
 
-int OpenSLESRecorder::start() {
+int AudioRecorder::start() {
     std::thread::id tid = std::this_thread::get_id();
     ALOGI(LOG_TAG, "call start() thread-id= %lu",tid);
     if (isRecording)
         return 0;
     isRecording = true;
-    audioRecordThread = std::thread(&OpenSLESRecorder::threadFun, this);
+    audioRecordThread = std::thread(&AudioRecorder::threadFun, this);
     return QCODE_OK;
 }
 
-int OpenSLESRecorder::DestroyEngine() {
+int AudioRecorder::DestroyEngine() {
     if (recorderObject != nullptr) {
         (*recorderObject)->Destroy(recorderObject);
         recorderObject = nullptr;
@@ -227,7 +227,7 @@ int OpenSLESRecorder::DestroyEngine() {
     return QCODE_OK;
 }
 
-int OpenSLESRecorder::stop() {
+int AudioRecorder::stop() {
     std::thread::id tid = std::this_thread::get_id();
     ALOGI(LOG_TAG, "call stop() thread-id= %lu",tid);
     isRecording = false;

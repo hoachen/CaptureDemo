@@ -2,8 +2,8 @@
 // Created by chenhao on 2021/8/26.
 //
 
-#ifndef CAPTUREDEMO_OPENSLESRECORDER_H
-#define CAPTUREDEMO_OPENSLESRECORDER_H
+#ifndef CAPTUREDEMO_AUDIORECORDER_H
+#define CAPTUREDEMO_AUDIORECORDER_H
 
 #include "common.h"
 #include "RecorderBase.h"
@@ -11,11 +11,11 @@
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
 
-class OpenSLESRecorder : public RecorderBase {
+class AudioRecorder : public RecorderBase {
 
 public:
-    OpenSLESRecorder();
-    ~OpenSLESRecorder();
+    AudioRecorder();
+    ~AudioRecorder();
     int init(SourceConfig &config) override;
     int start() override;
     int stop() override;
@@ -44,4 +44,4 @@ private:
 };
 
 
-#endif //CAPTUREDEMO_OPENSLESRECORDER_H
+#endif //CAPTUREDEMO_AUDIORECORDER_H

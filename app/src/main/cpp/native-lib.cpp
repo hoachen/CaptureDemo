@@ -3,9 +3,9 @@
 #include <memory>
 #include <thread>
 #include "RecorderBase.h"
-#include "OpenSLESRecorder.h"
+#include "AudioRecorder.h"
 #include "RenderBase.h"
-#include "OpenSLESRender.h"
+#include "AudioRender.h"
 #include "log.h"
 
 static FILE *file;
@@ -32,12 +32,12 @@ Java_com_video_editor_capturedemo_MainActivity_createAudioRecorder(
         JNIEnv* env,
         jobject /* this */) {
     std::string hello = "Hello from C++";
-    RecorderBase  *recorderBase = new OpenSLESRecorder();
+    RecorderBase  *recorderBase = new AudioRecorder();
     recorderBase->output = audioRecordCallBack;
     SourceConfig conf;
     conf.channels = 1;
     conf.sampleRate = 16000;
-    conf.bitDepth = 8;
+    conf.bitDepth = 16;
     recorderBase->init(conf);
     return reinterpret_cast<long>(recorderBase);
 }
@@ -83,7 +83,7 @@ Java_com_video_editor_capturedemo_MainActivity_createAudioRender(
         JNIEnv* env,
         jobject /* this */) {
     std::string hello = "Hello from C++";
-    RenderBase  *renderBase = new OpenSLESRender();
+    RenderBase  *renderBase = new AudioRender();
     SinkConfig conf;
     renderBase->init(conf);
     return reinterpret_cast<long>(renderBase);
@@ -118,7 +118,7 @@ Java_com_video_editor_capturedemo_MainActivity_startRenderAudio (
         memcpy(data, buff,  readSize);
         std::shared_ptr<Task> task(new Task());
         task->sampleRate = 16000;
-        task->bitDepth = 8;
+        task->bitDepth = 16;
         task->channels = 1;
         task->data[0] = data;
         task->linesize[0] = readSize;
